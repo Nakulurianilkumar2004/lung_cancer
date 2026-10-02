@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import fmt_metric %}
+{% block title %}Performance · {% endblock %}
+{% block content %}
+{% set imp = info.importance %}
+<section id="performance">
+  <div class="wrap">
+    <div class="eyebrow">Experimental Results</div>
+    <h2>Model evaluation</h2>
+    <p class="lead">Scores on the held-out test set, plus cross-validated accuracy to show the result is stable rather than a
+       lucky split.</p>
+
+    {% set desc = {
+      'Accuracy': 'Share of test patients classified correctly.',
+      'F1 Score': 'Harmonic mean of precision and recall for the cancer class.',
+      'AUC Score': 'Probability a random positive patient is ranked above a random negative one.',
+      'CV Accuracy': 'Mean accuracy across cross-validation folds.'
+    } %}
+    <div class="metric-grid">
+      {% for k, v in metrics.items() %}
+      <div class="card metric">
+        <div class="k">{{ k }}</div>
+        <div class="v num">{{ fmt_metric(k, v) }}</div>
+        <div class="meter"><div style="width: {{ v * 100 }}%"></div></div>
+        <div class="muted small">{{ desc.get(k, '') }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h3>Global feature importance</h3>
+        <div class="muted small">CatBoost importance (PredictionValuesChange) over all {{ info.n_final }} model inputs.</div>
+        <div class="share" role="img" aria-label="Latent features {{ '%.1f'|format(imp.latent_share) }} percent, clinical features {{ '%.1f'|format(imp.selected_share) }} percent">
+          <div style="width: {{ imp.latent_share }}%; background:var(--accent)">Latent {{ '%.1f'|format(imp.latent_share) }}%</div>
+          <div style="width: {{ imp.selected_share }}%; background:var(--brand)">{{ '%.1f'|format(imp.selected_share) }}%</div>
+        </div>
+        <div class="small muted">
+          <span><i class="key" style="background:var(--accent)"></i>Neural latent features (z)</span> &nbsp;
+          <span><i class="key" style="background:var(--brand)"></i>SHAP-selected clinical features</span>
+        </div>
+        <div class="imp-scroll">
+          {% for r in imp.rows %}
+          <div class="imp-row {{ 'lat' if r.latent else '' }}">
+            <span>{{ r.name }}</span>
+            <div class="t"><div style="width: {{ r.pct }}%"></div></div>
+            <span class="n num">{{ '%.2f'|format(r.value) }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card">
+        <h3>CatBoost configuration</h3>
+        <div class="muted small">Read directly from the trained model file.</div>
+        <table>
+          {% for k, v in info.catboost %}<tr><td class="muted">{{ k }}</td><td class="num">{{ v }}</td></tr>{% endfor %}
+        </table>
+        <div class="insight">
+          <b>Key finding:</b> the {{ info.n_latent }} learned latent features carry
+          <b>{{ '%.0f'|format(imp.latent_share) }}%</b> of the model’s total importance, so the neural encoder is
+          contributing information beyond the raw clinical attributes.
+        </div>
+      </div>
+    </div>
+    <div class="pager no-print">
+      <a class="btn btn-outline" href="{{ url_for('predict') }}">← Live prediction</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

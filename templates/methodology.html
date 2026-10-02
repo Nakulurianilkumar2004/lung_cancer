@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import fmt_metric %}
+{% block title %}Methodology · {% endblock %}
+{% block content %}
+<section id="methodology">
+  <div class="wrap">
+    <div class="eyebrow">Proposed Methodology</div>
+    <h2>From survey answers to an explained risk score</h2>
+    <p class="lead">Six stages run on every request. The same preprocessing objects saved during training
+       (label encoders, scaler, encoder weights, CatBoost model) are reused at inference, so there is no
+       train/serve skew.</p>
+
+    <div class="pipeline">
+      <div class="stage"><div class="step">1</div><h4>Data input</h4>
+        <p>Demographics, lifestyle habits and clinical symptoms from a patient survey.</p>
+        <span class="dim">{{ info.n_raw }} attributes</span></div>
+      <div class="stage"><div class="step">2</div><h4>Preprocessing</h4>
+        <p>Label-encode categoricals, Yes/No → 2/1, then z-score standardisation.</p>
+        <span class="dim">StandardScaler</span></div>
+      <div class="stage"><div class="step">3</div><h4>SHAP selection</h4>
+        <p>Keep the attributes with the highest mean |SHAP| contribution.</p>
+        <span class="dim">{{ info.n_raw }} → {{ info.n_selected }}</span></div>
+      <div class="stage latent"><div class="step">4</div><h4>Neural encoder</h4>
+        <p>MLP with ReLU learns non-linear interactions as a latent code.</p>
+        <span class="dim">{{ info.encoder|join(' → ') }}</span></div>
+      <div class="stage latent"><div class="step">5</div><h4>Feature fusion</h4>
+        <p>Concatenate the selected features with the latent vector.</p>
+        <span class="dim">{{ info.n_selected }} ⊕ {{ info.n_latent }} = {{ info.n_final }}</span></div>
+      <div class="stage"><div class="step">6</div><h4>CatBoost</h4>
+        <p>Gradient-boosted oblivious trees output P(lung cancer); threshold 0.5.</p>
+        <span class="dim">Probability</span></div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h3>SHAP-selected features</h3>
+        <div class="muted small">Kept in SHAP rank order. Struck-through attributes were dropped by the selection step.</div>
+        <div class="chips">
+          {% for n in info.selected %}<span class="chip"><i>#{{ loop.index }}</i>{{ n }}</span>{% endfor %}
+          {% for n in info.dropped %}<span class="chip off">{{ n }}</span>{% endfor %}
+        </div>
+      </div>
+      <div class="card">
+        <h3>Neural encoder architecture</h3>
+        <div class="muted small">Fully connected layers, ReLU activations; bar height ∝ layer width.</div>
+        {% set maxw = info.encoder|max %}
+        <div class="nn">
+          {% for w in info.encoder %}
+          <div class="layer {{ 'lat' if loop.last else '' }}">
+            <b class="num">{{ w }}</b>
+            <div class="bar" style="height: {{ (w / maxw * 120)|round|int + 8 }}px"></div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="nn-labels">
+          {% for w in info.encoder %}
+          <span>{{ 'Input' if loop.first else ('Latent z' if loop.last else 'Hidden ' ~ (loop.index0)) }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="pager no-print">
+      <a class="btn btn-outline" href="{{ url_for('home') }}">← Overview</a>
+      <a class="btn btn-primary" href="{{ url_for('predict') }}">Try live prediction →</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "_macros.html" import fmt_metric %}
+{% block content %}
+<section class="hero" id="overview">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">M.Tech Project · Machine Learning in Healthcare</div>
+        <h1>Lung Cancer Risk Prediction using SHAP-Guided Feature Selection and Neural Latent Features with CatBoost</h1>
+        <p>A hybrid pipeline that keeps the most informative clinical attributes (by SHAP value), learns a compact
+           {{ info.n_latent }}-dimensional representation with a neural encoder, and classifies the fused feature
+           vector with a gradient-boosted CatBoost model. Every prediction comes with its own explanation.</p>
+        <div class="btn-row">
+          <a class="btn btn-light" href="{{ url_for('predict') }}">Try live prediction →</a>
+          <a class="btn btn-ghost" href="{{ url_for('methodology') }}">View methodology</a>
+        </div>
+      </div>
+      <div class="kpis">
+        {% for k, v in metrics.items() %}
+        <div class="kpi">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="10"/>
+            <circle class="ring-fill" cx="50" cy="50" r="42" fill="none" stroke-width="10" pathLength="100"
+                    stroke-dasharray="{{ '%.1f'|format(v * 100) }} 100" transform="rotate(-90 50 50)"/>
+          </svg>
+          <div><div class="v num">{{ fmt_metric(k, v) }}</div><div class="k">{{ k }}</div></div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="facts">
+      {% if info.n_records %}<div class="fact"><b class="num">{{ info.n_records }}</b><span>Patient records</span></div>{% endif %}
+      <div class="fact"><b class="num">{{ info.n_raw }}</b><span>Input attributes</span></div>
+      <div class="fact"><b class="num">{{ info.n_selected }}</b><span>SHAP-selected features</span></div>
+      <div class="fact"><b class="num">{{ info.n_latent }}</b><span>Neural latent features</span></div>
+      <div class="fact"><b class="num">{{ info.n_final }}</b><span>Features into CatBoost</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Explore the project</div>
+    <h2>Where to next?</h2>
+    <p class="lead">Each part of the work has its own page. Start with the methodology, run a live prediction,
+       then review the evaluation results.</p>
+    <div class="explore">
+      <a class="card" href="{{ url_for('methodology') }}"><div class="ico">🧬</div><h3>Methodology</h3>
+        <div class="muted small">The six-stage pipeline: preprocessing, SHAP selection, neural encoder, fusion and CatBoost.</div>
+        <span class="go">View pipeline →</span></a>
+      <a class="card" href="{{ url_for('predict') }}"><div class="ico">🩺</div><h3>Live prediction</h3>
+        <div class="muted small">Enter a patient profile or load a demo patient, then get an explained risk score.</div>
+        <span class="go">Start assessment →</span></a>
+      <a class="card" href="{{ url_for('performance') }}"><div class="ico">📊</div><h3>Performance</h3>
+        <div class="muted small">Test-set metrics, cross-validation, global feature importance and model configuration.</div>
+        <span class="go">See results →</span></a>
+    </div>
+  </div>
+</section>
+{% endblock %}

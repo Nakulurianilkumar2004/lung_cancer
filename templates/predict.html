@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% from "_macros.html" import fmt_metric %}
+{% block title %}Predict · {% endblock %}
+{% block content %}
+<section id="predict">
+  <div class="wrap">
+    <div class="eyebrow">Live Demonstration</div>
+    <h2>Patient risk assessment</h2>
+    <p class="lead">Fill in the patient profile, or load a demo patient from the panel. Features marked
+       <span class="star">★</span> were chosen by SHAP and go straight into the model; the rest only affect scaling.</p>
+
+    {% if error %}<div class="err"><b>Could not predict:</b> {{ error }}</div>{% endif %}
+
+    <form method="post" action="{{ url_for('predict') }}" id="form">
+      <div class="predict-grid">
+        <div class="groups">
+          {% for g in groups %}
+          <fieldset>
+            <legend>{{ g.title }}</legend>
+            <div class="fields">
+              {% for f in g.fields %}
+              <div class="field">
+                <label class="lbl" for="{{ f.key }}">{{ f.label }}
+                  {% if f.name.strip().upper() in selected_set %}<span class="star" title="SHAP-selected feature">★</span>{% endif %}
+                </label>
+                {% if f.type == 'number' %}
+                  <input type="number" id="{{ f.key }}" name="{{ f.key }}" min="1" max="120" required
+                         value="{{ values.get(f.key, '') }}" placeholder="Years, e.g. 60">
+                {% elif f.type == 'category' %}
+                  <select id="{{ f.key }}" name="{{ f.key }}" required>
+                    {% for o in f.options %}
+                    <option value="{{ o }}" {% if values.get(f.key) == o %}selected{% endif %}>
+                      {{ 'Male' if o == 'M' else ('Female' if o == 'F' else o) }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                {% else %}
+                  <div class="seg" role="radiogroup" aria-label="{{ f.label }}">
+                    <label><input type="radio" name="{{ f.key }}" value="YES" required
+                           {% if values.get(f.key) == 'YES' %}checked{% endif %}>Yes</label>
+                    <label><input type="radio" name="{{ f.key }}" value="NO"
+                           {% if values.get(f.key, 'NO') == 'NO' %}checked{% endif %}>No</label>
+                  </div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </fieldset>
+          {% endfor %}
+        </div>
+
+        <aside class="side">
+          <div class="card">
+            <div class="muted small">Risk factors marked “Yes”</div>
+            <div><span class="counter num" id="yesCount">0</span> <span class="muted">/ <span id="yesTotal">0</span></span></div>
+            <button type="submit" class="btn btn-primary" style="margin-top:14px">Analyse risk</button>
+            <button type="button" class="btn btn-outline" id="resetBtn" style="margin-top:8px">Clear form</button>
+          </div>
+          <div class="card">
+            <h3>Demo patients</h3>
+            <div class="muted small">One click fills the form, then press “Analyse risk”.</div>
+            {% for pid, p in presets.items() %}
+            <button type="button" class="preset" data-preset="{{ pid }}">
+              <span>{{ p.label }}</span>
+              <span class="dot" style="background: var(--{{ pid }})"></span>
+            </button>
+            {% endfor %}
+          </div>
+        </aside>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  // Live "Yes" counter
+  var form = document.getElementById("form");
+  var radios = form.querySelectorAll('input[type=radio][value=YES]');
+  document.getElementById("yesTotal").textContent = radios.length;
+  function count() {
+    document.getElementById("yesCount").textContent =
+      Array.prototype.filter.call(radios, function (r) { return r.checked; }).length;
+  }
+  form.addEventListener("change", count); count();
+
+  // Demo presets
+  var PRESETS = {{ presets|tojson }};
+  function fill(values) {
+    Object.keys(values).forEach(function (key) {
+      var v = String(values[key]);
+      var el = form.elements[key];
+      if (!el) return;
+      if (el.length && el[0] && el[0].type === "radio") {
+        Array.prototype.forEach.call(el, function (r) { r.checked = (r.value === v); });
+      } else { el.value = v; }
+    });
+    count();
+  }
+  document.querySelectorAll("[data-preset]").forEach(function (b) {
+    b.addEventListener("click", function () { fill(PRESETS[b.dataset.preset].values); });
+  });
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    var blank = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name) return;
+      blank[el.name] = el.type === "radio" ? "NO" : (el.tagName === "SELECT" ? el.options[0].value : "");
+    });
+    fill(blank);
+  });
+})();
+</script>
+{% endblock %}

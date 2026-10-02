@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import fmt_metric %}
+{% block title %}Result · {% endblock %}
+{% block content %}
+{% set ex = result.explain %}
+<form id="editForm" method="post" action="{{ url_for('predict') }}" hidden>
+  <input type="hidden" name="_edit" value="1">
+  {% for k, v in values.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+</form>
+<section id="result">
+  <div class="wrap">
+    <div class="print-only" style="margin-bottom:16px">
+      <h2 style="margin:0">Lung Cancer Risk Report</h2>
+      <div class="muted small">SHAP feature selection + Neural encoder + CatBoost · for research/educational use only</div>
+    </div>
+    <div class="eyebrow no-print">Prediction Result</div>
+    <h2 class="no-print">Model output &amp; explanation</h2>
+
+    <div class="card">
+      <div class="result-top">
+        <svg class="gauge" viewBox="0 0 300 175" role="img" aria-label="Risk gauge at {{ result.prob }} percent">
+          <path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="var(--low)"  stroke-width="22" pathLength="100" stroke-dasharray="35 100"/>
+          <path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="var(--mid)"  stroke-width="22" pathLength="100" stroke-dasharray="0 35 30 100"/>
+          <path d="M30 150 A120 120 0 0 1 270 150" fill="none" stroke="var(--high)" stroke-width="22" pathLength="100" stroke-dasharray="0 65 35 100"/>
+          <line x1="150" y1="22" x2="150" y2="42" stroke="var(--text)" stroke-width="2" opacity=".5"/>
+          <g class="needle" style="--angle: {{ (result.prob * 1.8 - 90)|round(2) }}deg">
+            <line x1="150" y1="150" x2="150" y2="48" stroke="var(--text)" stroke-width="5" stroke-linecap="round"/>
+          </g>
+          <circle cx="150" cy="150" r="10" fill="var(--text)"/>
+          <text x="30"  y="172" font-size="12" fill="var(--muted)" text-anchor="middle">0%</text>
+          <text x="150" y="16"  font-size="12" fill="var(--muted)" text-anchor="middle">50%</text>
+          <text x="270" y="172" font-size="12" fill="var(--muted)" text-anchor="middle">100%</text>
+        </svg>
+
+        <div>
+          <span class="band {{ result.band.cls }}">● {{ result.band.name }}</span>
+          <div class="verdict {{ 'c-high' if result.positive else 'c-low' }}">
+            {{ 'Lung cancer likely (YES)' if result.positive else 'Lung cancer unlikely (NO)' }}
+          </div>
+          <div class="stat-row">
+            <div><span class="muted small">P(lung cancer)</span><b class="num">{{ result.prob }}%</b></div>
+            <div><span class="muted small">Decision threshold</span><b class="num">50%</b></div>
+            <div><span class="muted small">Model log-odds</span><b class="num">{{ '%+.2f'|format(ex.total) }}</b></div>
+          </div>
+          <div class="btn-row no-print">
+            <button type="button" class="btn btn-primary" onclick="window.print()">Print report</button>
+            <button type="submit" form="editForm" class="btn btn-outline">Edit inputs</button>
+            <a class="btn btn-outline" href="{{ url_for('predict') }}">New patient</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>Why this prediction? Per-patient SHAP explanation</h3>
+      <div class="muted small">TreeSHAP contributions computed by CatBoost for this exact input, in log-odds.
+        Starting from the base value <b class="num">{{ '%+.2f'|format(ex.base) }}</b>, the contributions add up to the model output
+        <b class="num">{{ '%+.2f'|format(ex.total) }}</b>.</div>
+      {% set clin = ex.total - ex.base - ex.latent %}
+      <div class="sum-strip num">
+        <div><span>Base value</span><b>{{ '%+.2f'|format(ex.base) }}</b></div><i>+</i>
+        <div><span>Clinical features</span><b class="{{ 'c-high' if clin >= 0 else 'c-low' }}">{{ '%+.2f'|format(clin) }}</b></div><i>+</i>
+        <div class="lat"><span>Latent z1–z{{ info.n_latent }}</span><b class="{{ 'c-high' if ex.latent >= 0 else 'c-low' }}">{{ '%+.2f'|format(ex.latent) }}</b></div><i>=</i>
+        <div class="out"><span>Model output</span><b>{{ '%+.2f'|format(ex.total) }}</b></div>
+      </div>
+      <div class="shap-legend">
+        <span><i class="key" style="background:var(--high)"></i>Pushes towards cancer</span>
+        <span><i class="key" style="background:var(--low)"></i>Pushes away from cancer</span>
+        <span>Bars scaled to the largest clinical contribution</span>
+      </div>
+      {% for r in ex.rows %}
+      <div class="shap-row">
+        <div class="shap-name">{{ r.name }}<small>{{ r.value }}</small></div>
+        <div class="track">
+          <div class="sbar {{ 'up' if r.shap >= 0 else 'down' }}"
+               style="width: {{ r.pct / 2 }}%; animation-delay: {{ loop.index0 * 0.05 }}s"></div>
+        </div>
+        <div class="shap-val num {{ 'c-high' if r.shap >= 0 else 'c-low' }}">{{ '%+.3f'|format(r.shap) }}</div>
+      </div>
+      {% endfor %}
+
+      {% set ups = ex.rows|selectattr('shap', 'gt', 0)|list %}
+      {% set downs = ex.rows|selectattr('shap', 'lt', 0)|list %}
+      <div class="insight">
+        <b>Reading it:</b>
+        {% if ups %}the strongest clinical driver towards cancer is <b>{{ ups[0].name }} = {{ ups[0].value }}</b>{% endif %}{% if ups and downs %}, while {% endif %}{% if downs %}<b>{{ downs[0].name }} = {{ downs[0].value }}</b> pulls the risk down the most{% endif %}{% if not ups and not downs %}no single clinical feature dominates this prediction{% endif %}.
+        The {{ info.n_latent }} latent encoder features capture interactions between attributes that no single feature shows on its own.
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
