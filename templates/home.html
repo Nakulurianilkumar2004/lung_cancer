@@ -1,9 +1,8 @@
 {% extends "base.html" %}
-{% from "_macros.html" import fmt_metric %}
 {% block content %}
 <section class="hero" id="overview">
   <div class="wrap">
-    <div class="hero-grid">
+    <div class="hero-main">
       <div>
         <div class="eyebrow">M.Tech Project · Machine Learning in Healthcare</div>
         <h1>Lung Cancer Risk Prediction using SHAP-Guided Feature Selection and Neural Latent Features with CatBoost</h1>
@@ -14,18 +13,6 @@
           <a class="btn btn-light" href="{{ url_for('predict') }}">Try live prediction →</a>
           <a class="btn btn-ghost" href="{{ url_for('methodology') }}">View methodology</a>
         </div>
-      </div>
-      <div class="kpis">
-        {% for k, v in metrics.items() %}
-        <div class="kpi">
-          <svg viewBox="0 0 100 100" aria-hidden="true">
-            <circle class="ring-track" cx="50" cy="50" r="42" fill="none" stroke-width="10"/>
-            <circle class="ring-fill" cx="50" cy="50" r="42" fill="none" stroke-width="10" pathLength="100"
-                    stroke-dasharray="{{ '%.1f'|format(v * 100) }} 100" transform="rotate(-90 50 50)"/>
-          </svg>
-          <div><div class="v num">{{ fmt_metric(k, v) }}</div><div class="k">{{ k }}</div></div>
-        </div>
-        {% endfor %}
       </div>
     </div>
     <div class="facts">
@@ -43,7 +30,7 @@
     <div class="eyebrow">Explore the project</div>
     <h2>Where to next?</h2>
     <p class="lead">Each part of the work has its own page. Start with the methodology, run a live prediction,
-       then review the evaluation results.</p>
+       then see what the model has learned.</p>
     <div class="explore">
       <a class="card" href="{{ url_for('methodology') }}"><div class="ico">🧬</div><h3>Methodology</h3>
         <div class="muted small">The six-stage pipeline: preprocessing, SHAP selection, neural encoder, fusion and CatBoost.</div>
@@ -51,9 +38,9 @@
       <a class="card" href="{{ url_for('predict') }}"><div class="ico">🩺</div><h3>Live prediction</h3>
         <div class="muted small">Enter a patient profile or load a demo patient, then get an explained risk score.</div>
         <span class="go">Start assessment →</span></a>
-      <a class="card" href="{{ url_for('performance') }}"><div class="ico">📊</div><h3>Performance</h3>
-        <div class="muted small">Test-set metrics, cross-validation, global feature importance and model configuration.</div>
-        <span class="go">See results →</span></a>
+      <a class="card" href="{{ url_for('insights') }}"><div class="ico">📊</div><h3>Model insights</h3>
+        <div class="muted small">Which features drive the predictions, and how the CatBoost model is configured.</div>
+        <span class="go">Explore the model →</span></a>
     </div>
   </div>
 </section>

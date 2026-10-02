@@ -26,7 +26,6 @@ scaler         = load_pkl("scaler.pkl")
 label_encoders = load_pkl("label_encoders.pkl")
 encoder_bundle = load_pkl("encoder.pkl")
 feature_info   = load_pkl("feature_info.pkl")
-metrics        = load_pkl("metrics.pkl")
 
 FEATURES   = feature_info["feature_names"]          # exact column names, in order
 TOP_IDX    = np.array(feature_info["top_idx"])
@@ -241,7 +240,7 @@ app = Flask(__name__)
 
 
 def page(template, name, **ctx):
-    return render_template(template, page=name, metrics=metrics, info=MODEL_INFO, **ctx)
+    return render_template(template, page=name, info=MODEL_INFO, **ctx)
 
 
 @app.route("/")
@@ -254,9 +253,9 @@ def methodology():
     return page("methodology.html", "methodology")
 
 
-@app.route("/performance")
-def performance():
-    return page("performance.html", "performance")
+@app.route("/insights")
+def insights():
+    return page("insights.html", "insights")
 
 
 @app.route("/predict", methods=["GET", "POST"], endpoint="predict")

@@ -1,3 +1,0 @@
-{% macro fmt_metric(k, v) -%}
-  {%- if 'ACC' in k|upper -%}{{ '%.2f'|format(v * 100) }}%{%- else -%}{{ '%.3f'|format(v) }}{%- endif -%}
-{%- endmacro %}

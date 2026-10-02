@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Model Insights · {% endblock %}
+{% block content %}
+{% set imp = info.importance %}
+<section id="insights">
+  <div class="wrap">
+    <div class="eyebrow">Model Insights</div>
+    <h2>What the model relies on</h2>
+    <p class="lead">How much each of the {{ info.n_final }} inputs contributes to CatBoost's decisions, and the configuration of the trained model.</p>
+
+    <div class="pager no-print">
+      <a class="btn btn-outline" href="{{ url_for('predict') }}">← Live prediction</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
